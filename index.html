@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oranosis v1 · Oral lesion triage</title>
+<meta name="description" content="Differential diagnosis and malignancy-risk triage for peripheral exophytic oral lesions. Runs entirely in your browser.">
+<meta name="theme-color" content="#0e7490">
+<!--build:csp--><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'"><!--/build:csp-->
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<!--build:pwa--><link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png"><!--/build:pwa-->
+<!--build:css--><link rel="stylesheet" href="app.css"><!--/build:css-->
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#assess" data-go="assess"><img src="logo.svg" width="34" height="34" alt=""><div><b>Oranosis</b> <span class="mute">v1</span><small>Oral lesion triage</small></div></a>
+    <nav aria-label="Sections">
+      <div class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" role="tab" id="t-assess" aria-controls="tab-assess" aria-selected="true" tabindex="0" data-tab="assess">Assess</button>
+        <button type="button" role="tab" id="t-library" aria-controls="tab-library" aria-selected="false" tabindex="-1" data-tab="library">Library</button>
+        <button type="button" role="tab" id="t-evidence" aria-controls="tab-evidence" aria-selected="false" tabindex="-1" data-tab="evidence">Evidence</button>
+        <button type="button" role="tab" id="t-about" aria-controls="tab-about" aria-selected="false" tabindex="-1" data-tab="about">About</button>
+      </div>
+    </nav>
+    <button type="button" class="iconbtn" id="theme" aria-pressed="false" aria-label="Dark mode" title="Dark mode: off"><span aria-hidden="true">◐</span></button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice" role="note"><span aria-hidden="true">ⓘ</span><span><b>Research tool, not a medical device.</b> Runs in your browser. Nothing you enter leaves this device.</span></div>
+
+  <section id="tab-assess" role="tabpanel" aria-labelledby="t-assess">
+    <div class="page-head">
+      <h1>Describe the lesion</h1>
+      <p>Get a ranked differential and a malignancy-risk tier, with reasons.</p>
+    </div>
+
+    <div class="grid">
+      <div id="form-col">
+        <form id="form" autocomplete="off" novalidate>
+          <div class="card">
+            <h2><span class="step" aria-hidden="true">1</span>Patient</h2>
+            <div class="row3">
+              <div><label for="age">Age</label><input type="number" id="age" min="0" max="110" inputmode="numeric"></div>
+              <div><label for="sex">Sex</label><select id="sex"><option value="">Not stated</option><option value="f">Female</option><option value="m">Male</option></select></div>
+              <div><label for="count">Lesions</label><input type="text" id="count" value="1"></div>
+            </div>
+            <label for="patient habits">Habits</label>
+            <input type="text" id="patient habits">
+            <div class="chips" data-target="patient habits" data-mode="multi" role="group" aria-label="Common habits">
+              <button type="button" class="chip">smoker</button><button type="button" class="chip">hookah</button><button type="button" class="chip">alcohol</button><button type="button" class="chip">denture</button><button type="button" class="chip">mouth breather</button><button type="button" class="chip">pregnant</button><button type="button" class="chip">cheek/lip biting</button>
+            </div>
+            <label for="patient history">History</label>
+            <textarea id="patient history" placeholder="Onset, duration, growth, symptoms, drugs"></textarea>
+          </div>
+
+          <div class="card">
+            <h2><span class="step" aria-hidden="true">2</span>Lesion</h2>
+            <label for="location">Location</label>
+            <input type="text" id="location">
+            <div class="chips" data-target="location" data-mode="single" role="group" aria-label="Common locations">
+              <button type="button" class="chip">buccal mucosa</button><button type="button" class="chip">lower lip</button><button type="button" class="chip">upper lip</button><button type="button" class="chip">attached gingiva</button><button type="button" class="chip">interdental papilla</button><button type="button" class="chip">edentulous alveolar ridge</button><button type="button" class="chip">buccal vestibule (denture flange)</button><button type="button" class="chip">dorsal tongue</button><button type="button" class="chip">lateral border of tongue</button><button type="button" class="chip">ventral tongue</button><button type="button" class="chip">floor of mouth</button><button type="button" class="chip">hard palate</button><button type="button" class="chip">soft palate</button><button type="button" class="chip">retromolar area</button>
+            </div>
+            <div class="row2">
+              <div><label for="size(mm)">Size (mm)</label><input type="text" id="size(mm)" placeholder="10*8"></div>
+              <div><label for="extraoral findings">Extraoral</label><input type="text" id="extraoral findings" placeholder="normal"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2><span class="step" aria-hidden="true">3</span>Appearance</h2>
+            <label for="color">Colour</label><input type="text" id="color">
+            <div class="chips" data-target="color" data-mode="multi" role="group" aria-label="Common colours">
+              <button type="button" class="chip"><i class="sw" aria-hidden="true" style="background:#f4b6b6"></i>pink</button><button type="button" class="chip"><i class="sw" aria-hidden="true" style="background:#d62828"></i>red</button><button type="button" class="chip"><i class="sw" aria-hidden="true" style="background:#6a3d9a"></i>purple</button><button type="button" class="chip"><i class="sw" aria-hidden="true" style="background:#5b8bd6"></i>bluish</button><button type="button" class="chip"><i class="sw" aria-hidden="true" style="background:#f7f7f2"></i>white</button><button type="button" class="chip"><i class="sw" aria-hidden="true" style="background:#f2d64b"></i>yellow</button><button type="button" class="chip"><i class="sw" aria-hidden="true" style="background:#4a3326"></i>brown/black</button>
+            </div>
+            <label for="texture">Surface</label><input type="text" id="texture">
+            <div class="chips" data-target="texture" data-mode="multi" role="group" aria-label="Common surfaces">
+              <button type="button" class="chip">smooth</button><button type="button" class="chip">lobulated</button><button type="button" class="chip">papillary/verrucous</button><button type="button" class="chip">granular</button><button type="button" class="chip">rough</button><button type="button" class="chip">ulcerated</button><button type="button" class="chip">keratotic</button>
+            </div>
+            <div class="row2">
+              <div><label for="base">Base</label><input type="text" id="base">
+                <div class="chips" data-target="base" data-mode="multi" role="group" aria-label="Common bases"><button type="button" class="chip">sessile</button><button type="button" class="chip">pedunculated</button><button type="button" class="chip">dome shaped</button><button type="button" class="chip">fixed / non mobile</button></div></div>
+              <div><label for="consistency">Consistency</label><input type="text" id="consistency">
+                <div class="chips" data-target="consistency" data-mode="multi" role="group" aria-label="Common consistencies"><button type="button" class="chip">soft</button><button type="button" class="chip">rubbery</button><button type="button" class="chip">firm</button><button type="button" class="chip">hard</button><button type="button" class="chip">fluctuant</button><button type="button" class="chip">indurated</button></div></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2><span class="step" aria-hidden="true">4</span>Findings</h2>
+            <div class="checks" id="findings" role="group" aria-label="Findings">
+              <label><input type="checkbox" value="ulcer present">Ulceration</label>
+              <label><input type="checkbox" value="bleeding">Bleeding</label>
+              <label><input type="checkbox" value="painful">Pain</label>
+              <label><input type="checkbox" value="paresthesia">Numbness</label>
+              <label><input type="checkbox" value="rapid growth">Rapid growth</label>
+              <label><input type="checkbox" value="size fluctuates, ruptures">Fluctuates / ruptures</label>
+              <label><input type="checkbox" value="tooth mobility">Tooth mobility</label>
+              <label><input type="checkbox" value="bone resorption on radiograph">Bone change (X-ray)</label>
+              <label><input type="checkbox" value="diascopy positive, blanches">Blanches</label>
+              <label><input type="checkbox" value="recurrence after excision">Recurrent</label>
+            </div>
+            <label for="additional data">Notes</label>
+            <textarea id="additional data"></textarea>
+            <div class="meter-row"><div class="meter" aria-hidden="true"><div id="comp-bar"></div></div><span id="comp-txt" class="mute"></span></div>
+            <div class="actions">
+              <button type="submit" class="btn primary" id="go" disabled>Loading the model…</button>
+              <button type="button" class="btn ghost" id="example">Load example case</button>
+              <button type="button" class="btn ghost" id="clear">Clear form</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="sticky" id="result-col" aria-live="polite">
+        <div id="print-head" class="hidden"><h2>Oranosis v1 report</h2><p class="mute" id="print-date"></p></div>
+        <div class="card" id="result">
+          <div class="empty"><img src="logo.svg" width="70" height="70" alt=""><p>No result yet. Fill in the form and press <b>Analyse</b>.</p></div>
+        </div>
+        <p id="copy-status" class="sr-only" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+
+  <section id="tab-library" role="tabpanel" aria-labelledby="t-library" class="hidden">
+    <div class="page-head"><h1>Lesion library</h1><p>The 36 lesions Oranosis ranks, with their clinical summary, how to tell them apart and references.</p></div>
+    <div class="card stack">
+      <div class="lib-tools">
+        <div><label for="lib-q">Search lesions</label><input type="search" id="lib-q"></div>
+        <div><label for="lib-cat">Category</label><select id="lib-cat"><option value="">All categories</option></select></div>
+      </div>
+      <p id="lib-status" class="mute status" role="status">Loading the lesion library…</p>
+      <div id="lib"></div>
+    </div>
+  </section>
+
+  <section id="tab-evidence" role="tabpanel" aria-labelledby="t-evidence" class="hidden">
+    <div class="page-head"><h1>Evidence</h1><p>Nested cross-validation on 255 biopsy-confirmed lesions (21 malignant) from one centre.</p></div>
+    <div class="card stack">
+      <h2>Headline figures</h2>
+      <p class="mute">Measured for the full research model. This page runs the public model, which is about 1.6 points lower in top-1 accuracy (sensitivity analysis).</p>
+      <table class="rtable">
+        <thead><tr><th>Measure</th><th>Value</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Measure">Top-3 accuracy (differential)</td><td data-label="Value" class="num big" id="k-top3">83.8%</td><td data-label="What it means">The biopsy diagnosis is among the first three ranked lesions.</td></tr>
+          <tr><td data-label="Measure">Malignancy AUC</td><td data-label="Value" class="num big" id="k-auc">0.953</td><td data-label="What it means">How well the risk score separates malignant from benign lesions (1 = perfect).</td></tr>
+          <tr><td data-label="Measure">Cancer sensitivity at the borderline tier or above</td><td data-label="Value" class="num big" id="k-sens">95.2%</td><td data-label="What it means" id="k-sens-note">Share of cancers rated borderline or higher. Specificity at this cut-off: 66.1%.</td></tr>
+          <tr><td data-label="Measure">Specificity at the high tier</td><td data-label="Value" class="num big" id="k-spec">96.4%</td><td data-label="What it means" id="k-spec-note">Share of benign lesions not rated high. Sensitivity at this cut-off: 76.2%.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cols2">
+      <div class="card"><h2>Diagnosis</h2><div id="perf-dx"><p class="mute">Loading the comparison…</p></div></div>
+      <div class="card"><h2>Malignancy</h2><div id="perf-mal"><p class="mute">Loading the cut-offs…</p></div></div>
+    </div>
+    <div class="card" style="margin-bottom:30px"><h2>How it works</h2><div id="howtrained"><p class="mute">Loading…</p></div></div>
+  </section>
+
+  <section id="tab-about" role="tabpanel" aria-labelledby="t-about" class="hidden">
+    <div class="page-head"><h1>About</h1></div>
+    <div class="card stack" style="max-width:760px">
+      <ul>
+        <li><b>For:</b> dentists and oral medicine/surgery clinicians, as a second opinion on peripheral (exophytic) soft-tissue lesions.</li>
+        <li><b>Not for:</b> ruling out cancer, intraosseous lesions, or use without a clinician.</li>
+        <li><b>Evidence:</b> validated at one centre (255 lesions, 21 malignant). External validation pending. Figures refer to the research model; this page runs the public model (about 1.6 points lower top-1 in the sensitivity analysis).</li>
+        <li><b>Privacy:</b> everything runs in your browser; nothing you enter is sent anywhere or stored. Do not enter names or IDs anyway.</li>
+        <li><b>Same engine as the Python version:</b> this page contains a JavaScript port of the Oranosis engine. It was tested against the Python reference on 45,900 inputs with 0 differences (see <code>reports/js_equivalence.md</code> in the repository).</li>
+      </ul>
+      <p id="about" class="mute"></p>
+      <p class="mute">Zeinali MR, Mirzaei H, Khalighi HR. Introducing Oranosis v1 (manuscript in preparation).</p>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">Oranosis v1 · SBMU School of Dentistry · <span id="model-date"></span> · Research use only · <span id="offline-badge"></span></div></footer>
+<!--build:app--><script type="module" src="app.js"></script><!--/build:app-->
+</body>
+</html>
