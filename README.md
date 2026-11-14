@@ -1,164 +1,207 @@
 # Oranosis v1
 
-**Offline, interpretable decision support for peripheral exophytic oral lesions: a ranked differential diagnosis of 36 lesions and a four-tier malignancy-risk triage, computed from 14 descriptive clinical fields.**
+You describe a peripheral exophytic oral lesion in 14 clinical fields. The tool returns a ranked differential diagnosis over 36 lesions and a four-tier malignancy risk, with the features that argued for and against each diagnosis. The engine is JavaScript in the browser tab: no server, no API key, no network request after the first load, and nothing you type leaves the device.
 
-**Live site: [oranosis.ir](https://oranosis.ir)** · the whole engine is in-memory JavaScript — no server, no API key, no internet connection needed after the first page load — and nothing that is typed into the tool leaves the device.
-
----
+Live site: [oranosis.ir](https://oranosis.ir)
 
 ## Credits
 
-**DDS, DMD Dr. Mohammad Reza Zeinali**
-ORCID: [0009-0000-9635-4337](https://orcid.org/0009-0000-9635-4337)
-
+DDS, DMD Dr. Mohammad Reza Zeinali
+ORCID [0009-0000-9635-4337](https://orcid.org/0009-0000-9635-4337)
 School of Dentistry, Shahid Beheshti University of Medical Sciences, Tehran, Iran.
-Concept, data, clinical knowledge base, model development, validation, software and documentation: the author.
 
----
+He assembled the clinical knowledge base, built and trained the model, ran the validation, wrote the software, and wrote this documentation.
 
 ## Abstract
 
-**Objective.** To provide an interpretable, self-contained decision-support engine that converts a routine clinical description of a peripheral exophytic oral lesion into a ranked differential diagnosis and a malignancy-risk tier, and to document the evidence base and validation behind it.
+Objective. To test whether a transparent probabilistic model, built from published clinical knowledge and labelled case material, can rank the histopathologic diagnosis of a peripheral exophytic oral lesion and estimate its malignancy risk from routine clinical description alone, offline, and at the level of the clinicians who saw the same patients.
 
-**Methods.** A curated literature knowledge base (36 peripheral oral lesions; 19 malignancy red flags; WHO 2022, Neville 5th ed., Burket 13th ed.) was fused with 1,623 cases machine-extracted from 6,226 PubMed case reports and case series, and with 255 biopsy-confirmed lesions (227 patients, 21 malignant) from a university oral medicine department. Free text from the 14 standard clinical fields is parsed into 76 binary features with explicit negation and "unknown ≠ absent" handling. A hierarchical Bayesian classifier is fine-tuned discriminatively as a softmax regression and blended with a similarity-weighted nearest-neighbour vote over local cases. Malignancy risk combines a Bayesian logistic regression, whose prior is the literature red-flag set, with the differential's malignant mass, under a monotone safety constraint: adding a red flag can never lower the estimated risk. All settings and the three risk thresholds were selected by nested cross-validation; histopathology was the reference standard. Grok 4.5 and the clinicians who saw the same patients served as benchmarks.
+Methods. A literature knowledge base of 36 peripheral oral lesions and 19 malignancy red flags was combined with 1,623 presentations extracted from 6,226 PubMed case reports and with 255 biopsy-confirmed lesions from 227 patients, 21 of them malignant. A reader maps the 14 free-text clinical fields onto 76 binary features, handling negation and treating an empty field as unknown rather than absent. A hierarchical Bayesian classifier is fine-tuned as a softmax regression and blended with a nearest-neighbour vote over the local cases. Malignancy risk averages a logistic regression, whose starting coefficients are the literature red flags, with the malignant share of the differential, under a constraint that adding a red flag can never lower the risk. Settings and the three risk thresholds were chosen by nested cross-validation, 10 folds repeated 3 times. Histopathology was the reference standard. The same 255 lesions had already been diagnosed by Grok 4.5 and by oral medicine clinicians, which gives two benchmarks.
 
-**Results.** Oranosis placed the histopathologic diagnosis first in **61.8%** of 255 lesions and within the top three in **83.8%**, with a Cohen's κ of 0.532 and a malignancy **AUC of 0.953**. Top-3 agreement was higher than Grok 4.5 (78.4%; paired McNemar *P* = .04) and slightly above the clinicians' any-listed agreement (79.2%), who remained better at naming the single correct diagnosis (67.5%). At its safety-first tier the engine detected 20 of 21 cancers (sensitivity 95.2%, specificity 66.1%); the intermediate tier gave 87.3%/87.2% and the urgent tier 76.2%/96.4%. It never refuses to answer.
+Results. Oranosis put the histopathologic diagnosis first in 61.8% of the 255 lesions and in the top three in 83.8% (Cohen's kappa 0.532); the malignancy AUC was 0.953 with a Brier score of 0.035. Top-three agreement was higher than Grok 4.5 at 78.4% (paired McNemar P = .04) and close to the clinicians' 79.2% of any-listed agreement, while the clinicians stayed ahead on the single correct diagnosis at 67.5%. At the safety-first tier the engine found 20 of 21 cancers, a sensitivity of 95.2% at 66.1% specificity. The intermediate tier gave 87.3% and 87.2%, the urgent tier 76.2% and 96.4%. The engine always returns an answer.
 
-**Conclusions.** A knowledge-guided, literature-augmented probabilistic model can reach clinician-level malignancy sensitivity on a biopsy-confirmed series while remaining fully explainable and, unlike a large language model, fully offline. External, prospective and multicentre validation is still required.
+Conclusions. Clinical knowledge, encoded as a prior and updated with case data, reached clinician-level malignancy sensitivity on one biopsy-confirmed series and stayed explainable feature by feature. Multicentre and prospective validation is required before clinical use.
 
-**Keywords.** mouth neoplasms · oral pathology · clinical decision support · machine learning · Bayesian inference · squamous cell carcinoma
+Keywords: mouth neoplasms, oral pathology, clinical decision support, machine learning, Bayesian inference, squamous cell carcinoma.
 
----
+Every figure above comes from the project's nested cross-validation and is recomputed from the source data by the project's audit script before each release.
 
-## 1. Introduction: what Oranosis v1 is
+## 1. What Oranosis v1 is
 
-Peripheral exophytic lesions are among the most frequent specimens in an oral biopsy service. Most are reactive or benign — irritation fibroma, pyogenic granuloma, peripheral giant cell granuloma, epulis fissuratum, papilloma, mucocele — but a minority are malignant. Squamous cell carcinoma, verrucous carcinoma, lymphoma and metastases can all present as an exophytic mass and can mimic reactive lesions closely. Reported clinicopathological concordance for such lesions ranges from roughly 50% to 80%, access to oral medicine specialists is unevenly distributed, and a delayed diagnosis of oral cancer is associated with a more advanced stage at presentation.
+Peripheral exophytic lesions are among the most frequent specimens an oral biopsy service receives. Irritation fibroma, pyogenic granuloma, peripheral giant cell granuloma, epulis fissuratum, papilloma and mucocele account for most of them. A minority are malignant, and squamous cell carcinoma, verrucous carcinoma, lymphoma and metastases can all arrive as an exophytic mass that looks reactive at first glance. Reported clinicopathological concordance for these lesions ranges from about 50% to 80%, and a delayed diagnosis of oral cancer is associated with a more advanced stage at presentation.
 
-Large language models have been proposed as diagnostic assistants, and in the 255-case series on which this tool was built, Grok 4.5 named the correct diagnosis first in 55.7% of lesions. That study also showed the structural problems of using a chat model for this task: outputs shift with model version and prompt wording, references may be fabricated, predictions cannot be calibrated to a local population, a small but critical fraction of cases is answered with "insufficient data", and the patient description has to be sent to an external server to obtain an answer at all. The last point alone makes routine clinical use unacceptable in most settings.
+Large language models have been proposed as diagnostic assistants for exactly this decision. In the 255-lesion series behind this tool, Grok 4.5 named the correct diagnosis first in 55.7% of cases. The same series showed what happens when a clinical question is routed through a chat model: answers move with model version and prompt wording, references can be invented, predictions cannot be calibrated to the local population, and a small number of cases come back as "insufficient data", one of which was a squamous cell carcinoma. The patient description also has to leave the clinic before anyone gets an answer, which rules the approach out for routine use in most settings.
 
-**Oranosis v1** is the alternative implemented as software. It is a transparent probabilistic engine that:
+Oranosis v1 is the same clinical task solved as software rather than as a conversation:
 
-1. **encodes published clinical knowledge as a prior** — what 36 lesions look like, which features argue for and against each one, and which findings are malignancy red flags;
-2. **learns from labelled presentations** — machine-extracted PubMed case reports and a local biopsy-confirmed series — instead of from free-form text generation;
-3. **answers with a calibrated differential diagnosis** ranked by probability, each entry accompanied by its supporting and opposing features, a one-line clinical summary, bedside discriminators and citable references;
-4. **adds an explicit safety layer** — a four-tier malignancy risk with a red-flag score, a monotone guarantee, and a rule that at or above the intermediate tier a malignant lesion is always present in the top three;
-5. **runs entirely offline** in a single HTML file in the browser, or as a Python application on a local machine, so that no patient description ever leaves the device.
+1. Published knowledge becomes the prior. For each of 36 lesions the engine holds a probability, a feature profile, the findings that argue for and against it, a clinical summary, bedside discriminators and references. Nineteen findings carry red-flag weights.
+2. Labelled presentations update that prior. The engine reads machine-extracted PubMed case reports and a local biopsy-confirmed series. It never generates free text as an answer.
+3. The answer is a ranked differential with the evidence attached. Each entry lists its supporting and opposing features and the literature behind it, so a reader can disagree with the reasoning and see where.
+4. Malignancy risk is a separate, explicit output: four tiers, a red-flag score, a monotone guarantee, and a rule that at the intermediate tier or above a malignant lesion is always present in the top three.
+5. The whole engine runs offline. One HTML file in the browser, or a Python application on a local machine, with no patient description leaving the device.
 
-It is a research and teaching tool, not a medical device. It does not replace clinical judgement or biopsy.
-
----
+It is a research and teaching tool. It does not replace clinical judgement or biopsy.
 
 ## 2. Methodology
 
-### 2.1 Study design and reference standard
+### Figure 1. Development pipeline
 
-Retrospective model development and internal validation. Development and reporting followed TRIPOD+AI and STARD 2015 principles. The protocol was approved by the Research Ethics Committee of the School of Dentistry, Shahid Beheshti University of Medical Sciences (IR.SBMU.DRC.REC.1404.076). Only archived, closed records were used, de-identified before analysis; no patient contact or intervention occurred. The reference standard was the final histopathologic diagnosis, standardised to the lesion categories of the knowledge base; malignant was defined as squamous cell carcinoma, lymphoma/malignant round-cell tumour or another malignant neoplasm.
+```mermaid
+flowchart TD
+    subgraph DATA["Data sources"]
+        KB["Literature knowledge base<br/>36 oral lesions · 19 red flags · 10 protective features<br/>WHO 2022 · Neville 5e · Burket 13e"]
+        RAW["PubMed + Europe PMC harvest<br/>6,226 case reports / series<br/>1,997 open-access full-text sections"]
+        LOC["Local database v1<br/>255 biopsy-confirmed lesions · 227 patients<br/>21 malignant · 14 clinical fields"]
+    end
+
+    RAW --> EXT["Extraction safeguards<br/>label from title · presentation sentences only<br/>lesion names masked · at least 3 informative features"]
+    EXT --> LIT["1,623 literature cases<br/>weight 0.25 to 0.5 · never used for class frequency"]
+
+    KB --> FEAT
+    LIT --> FEAT
+    LOC --> FEAT["Feature representation<br/>free text to 76 binary features<br/>negation-aware · empty = unknown, not absent"]
+
+    FEAT --> BAYES["Stage 1 · hierarchical Bayesian classifier<br/>KB prior, then PubMed cases, then local cases"]
+    BAYES --> DISC["Stage 2 · discriminative fine-tuning<br/>exact softmax rewrite + ridge towards Bayes"]
+    DISC --> BLEND["Blend, weight 0.3<br/>similarity-weighted nearest neighbours over local cases"]
+    BLEND --> DDX["Ranked differential · 36 lesions<br/>supporting / opposing features · discriminators · references"]
+
+    FEAT --> MAL["Malignancy logistic regression<br/>coefficient prior = literature red flags"]
+    KB --> MAL
+    DDX --> RISK["Risk = half of (logistic risk + malignant mass)<br/>sign constraints · red-flag monotone guard"]
+    MAL --> RISK
+    RISK --> TIER["Four-tier triage<br/>thresholds learned by inner CV: 5% / 10% / 20%"]
+    DDX --> ANSW
+    TIER --> ANSW["Answer<br/>differential · tier · red flags · drivers · advice · warnings"]
+```
+
+### 2.1 Design and reference standard
+
+The study is retrospective model development with internal validation, reported along the lines of TRIPOD+AI and STARD 2015. The Research Ethics Committee of the School of Dentistry, Shahid Beheshti University of Medical Sciences approved the protocol (IR.SBMU.DRC.REC.1404.076). Only archived closed records were used, de-identified before analysis, with no patient contact and no intervention. The reference standard is the final histopathologic diagnosis, standardised to the lesion categories of the knowledge base. Malignant means squamous cell carcinoma, lymphoma or malignant round-cell tumour, or another malignant neoplasm.
 
 ### 2.2 Data sources
 
-| Source | Content | Role |
+| Source | Content | Role in the model |
 |---|---|---|
-| Literature knowledge base | 36 peripheral oral lesions; per-lesion prior, feature profile, summary, discriminators and references; 19 malignancy red flags with point weights; 10 protective features | Prior and explanation text |
-| PubMed case database | 1,623 single-patient presentations extracted from 6,226 case reports / case series (37 lesion-specific searches) and 1,997 open-access full-text case sections | Likelihood refinement |
-| Local database v1 | 255 biopsy-confirmed lesions from 227 patients, 21 malignant, described by the 14 clinical fields before biopsy | Discriminative fine-tuning, kNN reference set, validation |
+| Literature knowledge base | 36 peripheral oral lesions with prior, feature profile, summary, discriminators and references; 19 red flags with point weights; 10 protective features | Prior, explanation text, red-flag scoring |
+| PubMed case database | 1,623 single-patient presentations extracted from 6,226 case reports and series (37 lesion-specific searches) and 1,997 open-access full-text case sections | Likelihood refinement |
+| Local database v1 | 255 biopsy-confirmed lesions from 227 patients, 21 malignant, described by the 14 clinical fields before biopsy | Discriminative fine-tuning, nearest-neighbour reference set, validation |
 
-Literature extraction is deliberately conservative. The label is taken from the article title, with the most specific lesion name winning and "X mimicking Y" labelled X; ambiguous, non-oral, animal, odontogenic/intraosseous and OPMD-only titles are excluded. Only sentences describing the patient's own presentation are retained — background definitions, histopathology, immunohistochemistry, treatment, follow-up and discussion are dropped — and **all lesion names are masked before features are read**, so that words such as *lobular*, *verrucous*, *granular* or *ossifying* cannot leak the answer. Automatic cases carry reduced weight (0.25–0.5) and are never used to estimate class frequencies, because case reports over-represent unusual presentations.
+Extraction is deliberately strict, because an automatic pipeline will otherwise teach the model the wrong lesson. The label comes from the article title, the most specific lesion name wins, and a title of the form "X mimicking Y" is labelled X. Ambiguous, non-oral, animal, odontogenic or intraosseous and OPMD-only titles are dropped. From each article the pipeline keeps only the sentences that describe the patient's own presentation, so background definitions, histopathology, immunohistochemistry, treatment, follow-up and discussion never reach the features. All lesion names are masked before features are read, which stops words such as lobular, verrucous, granular or ossifying from leaking the answer. Only reports with at least three informative features are kept, and automatic cases carry a weight of 0.25 to 0.5 and never contribute to class frequencies, since case reports over-represent unusual presentations.
 
 ### 2.3 From text to features
 
-The 14 clinical fields are free text in routine use, so the engine begins with a reader, not a form:
-
-- maps free text to **76 binary standardised features** across 9 groups: site, colour, surface, base, consistency, size, age, sex, habits, duration, course, ulceration, bleeding, pain, paresthesia, lymph nodes, tooth mobility, bone change, diascopy, and others;
-- handles **negation** both before and after a finding ("no pain", "painless"), with scope ending at contrastive conjunctions, and understands key aliases and units (age in months, size in mm);
-- treats an empty field as **unknown, not absent**, so missing descriptors never act as reassuring evidence. Fewer than three of six core descriptors triggers an explicit "unreliable assessment" warning rather than a confident answer.
+The clinical record is free text, so the engine starts with a reader rather than a form. It maps prose onto 76 binary standardised features across nine groups: site, colour, surface, base, consistency, size, age, sex, habits, duration, course, ulceration, bleeding, pain, paresthesia, lymph nodes, tooth mobility, bone change and diascopy. Negation is handled on both sides of a finding ("no pain", "painless"), with the scope ending at a contrastive conjunction, and the reader knows the common aliases and units (age in months, size in mm). An empty field is treated as unknown and never as absent, so a missing descriptor cannot be used as reassuring evidence. When fewer than three of the six core descriptors are observed, the answer carries an explicit warning that the assessment is unreliable.
 
 ### 2.4 Differential diagnosis
 
-**Stage 1 — hierarchical Bayesian classifier.** Each lesion's literature profile is the prior; PubMed cases then local cases update it (feature likelihoods, with smoothing). Class frequencies are taken only from the knowledge base and the local series.
+Stage one is a hierarchical Bayesian classifier. Each lesion's literature profile is the prior, PubMed cases then local cases update it through smoothed feature likelihoods, and class frequencies come only from the knowledge base and the local series.
 
-**Stage 2 — discriminative fine-tuning.** The Bayesian model is rewritten exactly as a softmax regression and fine-tuned on the data with a ridge penalty that pulls it back towards the Bayesian solution, then blended (weight 0.3) with a similarity-weighted nearest-neighbour vote over local cases. The nearest-neighbour component captures feature combinations the literature cannot express, such as gingiva + purple + sessile → peripheral giant cell granuloma.
+Stage two is discriminative fine-tuning. The Bayesian model is rewritten exactly as a softmax regression and fitted with a ridge penalty that pulls it back towards the Bayesian solution, then blended at weight 0.3 with a similarity-weighted nearest-neighbour vote over the local cases. The neighbour component catches feature combinations that no literature description expresses, such as gingiva plus purple plus sessile pointing to peripheral giant cell granuloma.
 
 ### 2.5 Malignancy risk and tiers
 
-The risk is the mean of (a) a Bayesian logistic regression whose starting coefficients are the literature red flags (ulceration, induration/fixation, hard nodes, paresthesia, red-white colour, high-risk sites, tobacco/alcohol, age, size, rapid growth, tooth mobility, bone change) and (b) the total malignant probability of the differential.
+Risk averages two quantities: a Bayesian logistic regression whose starting coefficients are the literature red flags (ulceration, induration or fixation, hard nodes, paresthesia, red-white colour, high-risk sites, tobacco and alcohol, age, size, rapid growth, tooth mobility, bone change), and the total malignant probability of the differential.
 
-Two safety constraints are always active:
+Two constraints are always on. Sign constraints stop a literature red flag from ever acting as a reassuring feature, and the monotone guard stops the estimated risk from falling when a red flag is added, which was checked on 4,560 simulated additions.
 
-- **sign constraints** — a literature red flag can never act as a reassuring feature;
-- **monotone guard** — the estimated risk can never fall when a red flag is added (verified on 4,560 simulated additions).
+The thresholds are learned rather than fixed by hand:
 
-Three thresholds are learned by cross-validation rather than fixed by hand:
-
-| Tier | Rule used to select the threshold | Current value |
+| Tier | How the threshold was chosen | Current value |
 |---|---|---|
-| **Borderline** (safety-first) | Highest threshold that keeps sensitivity ≥ 95% | ≥ 5% |
-| **Intermediate** (prompt biopsy) | Expected-cost optimum, a missed cancer weighted 15× an unnecessary biopsy | ≥ 10% |
-| **High** (urgent referral) | Threshold reaching specificity ≥ 97% | ≥ 20% |
+| Borderline, safety-first | Highest threshold that still keeps sensitivity at or above 95% | 5% or more |
+| Intermediate, prompt biopsy | Expected-cost optimum, a missed cancer weighted 15 times an unnecessary biopsy | 10% or more |
+| High, urgent referral | Threshold that reaches specificity at or above 97% | 20% or more |
 
-A red-flag score ≥ 4 raises the tier to at least intermediate and ≥ 6 makes it high. At intermediate or high, a malignant diagnosis is always inserted into the top three. The engine never declines to answer.
+A red-flag score of 4 or more raises the tier to at least intermediate, and 6 or more makes it high. At intermediate or high, a malignant diagnosis is always placed in the top three. The engine never declines to answer.
+
+### Figure 2. Path of one case through the engine
+
+```mermaid
+flowchart TD
+    CASE["14 clinical fields entered as free text"] --> RD["Feature reader<br/>76 binary features · negation · unknown is not absent"]
+
+    RD --> Q{"Fewer than 3 of 6<br/>core descriptors observed?"}
+    Q -->|"yes"| WARN["Answer issued with an explicit<br/>unreliable-assessment warning"]
+    Q -->|"no"| DDX["Ranked differential over 36 lesions"]
+    WARN --> DDX
+
+    RD --> FLAG["Red-flag score<br/>19 weighted findings"]
+    DDX --> RISK["Malignancy risk 0 to 100%<br/>logistic + malignant mass, monotone guard"]
+
+    RISK --> TIER{"Risk tier"}
+    FLAG -->|"score 4 or more"| ESC["Escalate at least to intermediate"]
+    FLAG -->|"score 6 or more"| HIGH["Escalate to high"]
+
+    TIER -->|"below 5%"| LOWT["Low<br/>routine review"]
+    TIER -->|"5% to 10%"| BORD["Borderline<br/>safety-first follow-up"]
+    TIER -->|"10% to 20%"| INT["Intermediate<br/>prompt biopsy"]
+    TIER -->|"20% or more"| URG["High<br/>urgent referral or biopsy"]
+
+    ESC --> INT
+    HIGH --> URG
+
+    INT --> INSERT["Malignant lesion guaranteed in the top three"]
+    URG --> INSERT
+    LOWT --> OUT
+    BORD --> OUT
+    INSERT --> OUT["Final answer<br/>differential · explanations · tier · drivers · advice"]
+```
 
 ### 2.6 Validation
 
-Model selection and every reported figure come from **nested cross-validation** (10-fold × 3 repeats, n = 255): every setting, blend weight and risk threshold was chosen inside the training folds only, so the test cases never influenced any choice. Discrimination, agreement (Cohen's κ) and McNemar comparisons against Grok 4.5 and against the clinicians' recorded diagnoses were computed on the same 255 lesions; confidence intervals are Wilson intervals for proportions and Hanley–McNeil intervals for AUC.
+Every figure reported here comes from nested cross-validation with 10 folds repeated 3 times on the 255 lesions. Each setting, blend weight and risk threshold was chosen inside the training folds only, so no test case influenced any choice. Agreement is Cohen's kappa, differences against Grok 4.5 are tested with the exact McNemar test on paired cases, proportion intervals are Wilson intervals and AUC intervals follow Hanley and McNeil.
 
-| Model | Top-1 | Top-2 | Top-3 | κ |
+| Model | Top-1 | Top-2 | Top-3 | Kappa |
 |---|---|---|---|---|
-| **Oranosis v1** (nested CV) | **61.8%** | 77.4% | **83.8%** | 0.532 |
-| Grok 4.5 (same 255 cases) | 55.7% | – | 78.4% | 0.466 |
-| Clinicians (oral medicine) | 67.5% | – | 79.2% (any listed) | 0.615 |
+| Oranosis v1, nested cross-validation | 61.8% | 77.4% | 83.8% | 0.532 |
+| Grok 4.5, same 255 lesions | 55.7% | not reported | 78.4% | 0.466 |
+| Clinicians in oral medicine | 67.5% | not reported | 79.2%, any listed | 0.615 |
 
-Malignancy triage on the 21 malignant lesions: AUC 0.953 (0.950–0.954), Brier 0.035; sensitivity/specificity 95.2%/66.1% (borderline), 87.3%/87.2% (intermediate) and 76.2%/96.4% (high). Top-3 agreement with histopathology was significantly higher than Grok 4.5 (McNemar *P* = .04); the top-1 difference was not significant. An external-validation scenario that never used a local label (knowledge base + PubMed cases only) still reached a malignancy AUC of 0.961, and the local fine-tuning is what raises differential accuracy to clinical level.
+On the 21 malignant lesions the AUC was 0.953 (0.950 to 0.954) and the Brier score 0.035. Sensitivity and specificity were 95.2% and 66.1% at the borderline tier, 87.3% and 87.2% at the intermediate tier, and 76.2% and 96.4% at the high tier. Top-three agreement with histopathology was significantly higher than Grok 4.5 (P = .04); the top-1 difference was not significant. A scenario that never used a local label, with the knowledge base and PubMed cases only, still reached an AUC of 0.961, and local fine-tuning is what lifts differential accuracy to clinical level.
 
-### 2.7 Reproducibility and quality assurance
+### 2.7 Reproduction and quality control
 
-Every published number is machine-checked against the data, the code and the deployed model:
+The project checks its own numbers, and none is copied into a document by hand:
 
-- **paper ↔ software audit** — recomputes each checkable figure in the manuscript from the datasets, code, model and per-case predictions, and confirms the live code path reproduces the validation path on all 255 cases; must report 0 failures;
-- **unit and regression tests** — feature reader, knowledge base, models, pipeline, engine, literature extraction, web server hardening and the browser edition;
-- **self-test** — textbook cases, including the batch path;
-- **stress testing** — 4,000 malformed records, invariance checks, clinical monotonicity, 40 reader phrasings, HTTP abuse and load;
-- **Python ↔ JavaScript equivalence** — the browser engine is a line-by-line port; 45,900 inputs (local cases, vignettes, reader phrasings, red-flag additions, seeded fuzz records, random feature vectors, batch files and summation/rounding edge cases) produce identical features, differential, tier, safety insertion, red flags, warnings and advice, with 0 mismatches. The browser re-checks 24 built-in probes at every start;
-- **determinism** — fixed seeds: retraining reproduces the deployed model, and the validation report, bit for bit.
+- The paper audit recomputes every checkable figure in the manuscript from the datasets, the code, the deployed model and the per-case predictions, and confirms that the live code path reproduces the validation path on all 255 cases. It must report zero failures.
+- Unit and regression tests cover the reader, the knowledge base, the models, the pipeline, the engine, literature extraction, the web server and the browser edition.
+- A self-test runs textbook cases, including the batch path.
+- A stress test fuzzes 4,000 malformed records and checks invariance, clinical monotonicity, 40 reader phrasings, HTTP abuse and load.
+- The browser engine is a line-by-line port of the Python engine, and an equivalence test compares them on 45,900 inputs: local cases, vignettes, reader phrasings, red-flag additions, seeded fuzz records, random feature vectors, batch files and summation or rounding edge cases. Features, differential, tier, safety insertion, red flags, warnings and advice match with zero mismatches, and the browser re-checks 24 built-in probes at every start.
+- Seeds are fixed, so retraining reproduces the deployed model and the validation report bit for bit.
 
-### 2.8 Privacy architecture
+### 2.8 What the public build contains
 
-The public build ships an **aggregate-only model**: no patient-level vectors, no narrative text and no identifiers. The build refuses to produce output otherwise, and an automated leak scan runs over every published file. Patient data, the research model and the source datasets are never part of the distributed site.
+The published site ships an aggregate model only. It holds no patient-level vectors, no narrative text and no identifiers, the build refuses to produce output that would, and an automated scan checks every published file against the text of the research database. The research datasets and the research model never enter this repository.
 
----
+## 3. Running it
 
-## 3. Using it
-
-**Browser edition (recommended).** Open **[oranosis.ir](https://oranosis.ir)**, or `index.html` from this repository, in any modern browser. Fill in the 14 fields (or load one of the demonstration cases) and press *Analyse*. The application is also installable as a PWA and keeps working with the network switched off; the footer shows `offline file · self-test OK` when the internal checks pass. Four tabs are provided: *Assess* (differential, risk, explanations), *Library* (the 36 lesions), *Evidence* (the evidence library and references) and *About* (methods, limitations, disclaimer). The browser edition has no Batch tab; local CSV batches are handled by the Python package.
-
-**Contents of this repository**
+Open [oranosis.ir](https://oranosis.ir), or `index.html` from this repository, in any modern browser. Fill in the 14 fields or load one of the demonstration cases, then press Analyse. The site installs as a PWA and keeps working with the network switched off; the footer shows `offline file · self-test OK` when the internal checks pass. Four tabs cover the workflow: Assess for the differential and the risk panel, Library for the 36 lesions, Evidence for the reference library, and About for methods, limitations and the disclaimer. This edition has no batch tab, because file handling belongs to the Python package.
 
 | File | Purpose |
 |---|---|
 | `index.html`, `app.js`, `app.css` | interface |
-| `oranosis.js` | the engine: feature reader, models, pipeline, safety layer, explanations |
-| `model.json` | public aggregate model (thresholds, coefficients) |
+| `oranosis.js` | feature reader, models, pipeline, safety layer, explanations |
+| `model.json` | public aggregate model: coefficients and thresholds |
 | `knowledge.json` | lesion library, red flags, references, reader vocabulary |
-| `selftest.json` | 24 probes with the answers computed by the reference Python implementation |
+| `selftest.json` | 24 probes with the answers computed by the Python reference |
 | `performance.json` | validation results shown in the interface |
 | `manifest.webmanifest`, `sw.js`, icons | installable offline PWA |
 | `LICENSE` | MIT |
 
----
-
 ## 4. Limitations
 
-- **Single centre.** The local series comes from one university department and contains 21 malignant lesions, so sensitivity intervals are wide (e.g. 95.2%, 95% CI 77–99%). External, prospective and multicentre validation is required before any clinical claim.
-- **Text only.** No photographs, radiographs or histopathology images are used.
-- **Clinically identical pairs.** Some lesions cannot be separated from clinical description alone (giant cell fibroma vs irritation fibroma: top-1 ≈ 22%). Histopathology remains the reference standard.
-- **Rare lesions** are represented by few or no local cases and rely mainly on literature priors.
-- **Automatically extracted literature cases** are noisier than expert abstraction, which is why they are down-weighted and never used for class frequencies.
-- **Risk may under-estimate** in the highest-risk band; high-risk predictions are not a substitute for urgent biopsy.
-- **Research and educational tool, not a medical device.** It does not replace clinical judgement, biopsy or specialist referral.
-
----
+- The local series comes from one university department, so the sensitivity intervals stay wide even with 21 malignant lesions (95.2%, 95% CI 77 to 99). External, prospective and multicentre validation is required before any clinical claim.
+- The model reads text only. It uses no photographs, radiographs or histopathology images.
+- Some pairs cannot be separated from clinical description alone. Giant cell fibroma and irritation fibroma are the clearest case, with giant cell fibroma at about 22% top-1. Histopathology remains the reference standard.
+- Rare lesions rest mainly on literature priors, because the local series contains few of them.
+- Automatically extracted literature cases are noisier than expert abstraction, which is why they are down-weighted and excluded from class frequencies.
+- Predictions in the highest-risk band may under-estimate observed risk, and they never substitute for urgent biopsy.
+- Oranosis v1 is a research and educational tool, not a medical device.
 
 ## 5. Citation and licence
 
-If you use Oranosis v1 in academic work, please cite the software and the accompanying article on the agreement of a large language model with histopathologic diagnosis of peripheral exophytic oral lesions, and this repository.
+If you use Oranosis v1 in academic work, cite this repository together with the accompanying study on the agreement of a large language model with histopathologic diagnosis of peripheral exophytic oral lesions.
 
-Released under the **MIT licence** (see `LICENSE`). The clinical knowledge base, model and documentation are provided for research and teaching; no clinical warranty is given or implied.
+The code is released under the MIT licence (see `LICENSE`). The clinical knowledge base, the model and this documentation are provided for research and teaching, with no clinical warranty.
