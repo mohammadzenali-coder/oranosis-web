@@ -1,0 +1,22 @@
+# Publish only the public website files listed below.
+# Keep research data, local instructions, tools, credentials and archives out of Git.
+*
+!/.gitignore
+!/.nojekyll
+!/README.md
+!/LICENSE
+!/CNAME
+!/index.html
+!/app.css
+!/app.js
+!/oranosis.js
+!/logo.svg
+!/icon-192.png
+!/icon-512.png
+!/manifest.webmanifest
+!/model.json
+!/knowledge.json
+!/performance.json
+!/selftest.json
+!/robots.txt
+!/sw.js
